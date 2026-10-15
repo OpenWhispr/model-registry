@@ -261,3 +261,19 @@ test("offline bundled selection hides future models until the client version sup
     "future",
   );
 });
+
+test("Object prototype names still require new-model integrity and supported engines", () => {
+  for (const id of ["toString", "valueOf", "hasOwnProperty"]) {
+    const next = structuredClone(seed);
+    next.parakeetModels[id] = {
+      ...seed.parakeetModels["parakeet-tdt-0.6b-v3"],
+      downloadUrl: "https://huggingface.co/test/model/resolve/main/model.tar.bz2",
+    };
+    assert.throws(() => assertCompatibleCatalog(next, seed), /sha256/);
+    next.parakeetModels[id].sha256 = "a".repeat(64);
+    assert.doesNotThrow(() => assertCompatibleCatalog(next, seed));
+    next.parakeetModels[id].runtime = "online";
+    next.parakeetModels[id].modelType = "cohere-transcribe";
+    assert.throws(() => assertCompatibleCatalog(next, seed), /engine combination/);
+  }
+});
