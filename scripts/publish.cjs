@@ -56,6 +56,10 @@ fs.writeFileSync(history, bytes);
 // later mutable branch. Their digests are captured in desktop provenance.
 fs.copyFileSync("lib/schema.cjs", path.join(directory, "schema.cjs"));
 fs.copyFileSync("lib/envelope.cjs", path.join(directory, "envelope.cjs"));
+fs.copyFileSync(
+  "lib/registrySelection.js",
+  path.join(directory, "registrySelection.js"),
+);
 fs.copyFileSync("trusted-keys.json", path.join(directory, "trusted-keys.json"));
 fs.writeFileSync(
   path.join(directory, "README.md"),
@@ -77,6 +81,7 @@ git(
     "history",
     "schema.cjs",
     "envelope.cjs",
+    "registrySelection.js",
     "trusted-keys.json",
     "README.md",
   ],

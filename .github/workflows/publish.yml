@@ -8,6 +8,7 @@ permissions:
 concurrency:
   group: model-registry-publication
   cancel-in-progress: false
+  queue: max
 jobs:
   publish:
     if: github.ref == 'refs/heads/main'

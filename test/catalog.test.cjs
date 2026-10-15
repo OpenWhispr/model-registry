@@ -187,3 +187,77 @@ test("new entries cannot collide with installed artifacts, invent transports, or
     assert.throws(() => assertCompatibleCatalog(next, seed));
   }
 });
+
+test("case aliases and scratch paths cannot become installed model identities", () => {
+  const changes = [
+    (data) =>
+      (data.whisperModels.alias = {
+        ...data.whisperModels.base,
+        fileName: data.whisperModels.base.fileName.toUpperCase(),
+        sha256: "a".repeat(64),
+      }),
+    (data) =>
+      data.localProviders[0].models.push({
+        ...data.localProviders[0].models[0],
+        id: "case-alias",
+        fileName: data.localProviders[0].models[0].fileName.toLowerCase(),
+        sha256: "a".repeat(64),
+      }),
+    (data) =>
+      (data.parakeetModels["PARAKEET-TDT-0.6B-V3"] = {
+        ...data.parakeetModels["parakeet-tdt-0.6b-v3"],
+        sha256: "a".repeat(64),
+      }),
+  ];
+  for (const id of ["temp-extract-model", "model.tmp", "other.tar.bz2"])
+    changes.push(
+      (data) =>
+        (data.parakeetModels[id] = {
+          ...data.parakeetModels["parakeet-tdt-0.6b-v3"],
+          sha256: "a".repeat(64),
+        }),
+    );
+  for (const change of changes) {
+    const next = structuredClone(seed);
+    change(next);
+    assert.throws(() => assertCompatibleCatalog(next, seed));
+  }
+});
+
+test("a later publication cannot raise a selected model's version floor and lose it on restart", () => {
+  const previous = structuredClone(seed);
+  previous.cloudProviders[0].models.push({
+    id: "persisted",
+    name: "Persisted",
+    description: "Fixture",
+    minAppVersion: "1.10.3",
+  });
+  const next = structuredClone(previous);
+  next.cloudProviders[0].models.at(-1).minAppVersion = "2.0.0";
+  assert.throws(
+    () => assertCompatibleCatalog(next, previous),
+    /minimum app version/,
+  );
+});
+
+test("offline bundled selection hides future models until the client version supports them", () => {
+  const { selectCatalogForVersion } = require("../lib/registrySelection.js");
+  const next = structuredClone(seed);
+  next.cloudProviders[0].models.push({
+    id: "future",
+    name: "Future",
+    description: "Fixture",
+    minAppVersion: "1.10.4",
+  });
+  assert.equal(
+    selectCatalogForVersion(next, {}, "1.10.3").cloudProviders[0].models.some(
+      (m) => m.id === "future",
+    ),
+    false,
+  );
+  assert.equal(
+    selectCatalogForVersion(next, {}, "1.10.4").cloudProviders[0].models.at(-1)
+      .id,
+    "future",
+  );
+});
