@@ -29,6 +29,19 @@ test("a supported cloud model can be added without changing provider identity", 
   );
 });
 
+test("transcription adapters without model selection cannot advertise additional IDs", () => {
+  for (const providerId of ["xai", "corti"]) {
+    const next = structuredClone(seed);
+    const provider = next.transcriptionProviders.find((p) => p.id === providerId);
+    provider.models.push({ ...provider.models[0], id: `${providerId}-new-model` });
+    assert.throws(
+      () => assertCompatibleCatalog(next, seed),
+      /does not support model selection/,
+      providerId,
+    );
+  }
+});
+
 test("a future-only entry is hidden without losing an existing selection", () => {
   const next = structuredClone(seed);
   next.cloudProviders[0].models.push({
