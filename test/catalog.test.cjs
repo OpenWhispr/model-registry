@@ -9,7 +9,7 @@ const {
 } = require("../lib/catalog.cjs");
 
 test("compiling split sources preserves every shipping catalog field", () => {
-  assert.deepEqual(readCatalog(), seed);
+  assert.doesNotThrow(() => assertCompatibleCatalog(readCatalog(), seed));
   assert.deepEqual(validateCatalog(seed), seed);
 });
 
@@ -145,10 +145,45 @@ test("all auxiliary model downloads need integrity checks too", () => {
     fileName: "new.gguf",
     sha256: "a".repeat(64),
     draftHfRepo: "example/model",
-    draftFileName: "draft.gguf",
+    draftFileName: "new-draft.gguf",
     draftSizeBytes: 1000000,
   });
   assert.throws(() => assertCompatibleCatalog(next, seed));
   next.localProviders[0].models.at(-1).draftSha256 = "b".repeat(64);
   assert.doesNotThrow(() => assertCompatibleCatalog(next, seed));
+});
+
+test("new entries cannot collide with installed artifacts, invent transports, or change defaults", () => {
+  const changes = [
+    (data) =>
+      data.localProviders[0].models.push({
+        ...data.localProviders[0].models[0],
+        id: "collision",
+        sha256: "a".repeat(64),
+      }),
+    (data) =>
+      (data.whisperModels.collision = {
+        ...data.whisperModels.base,
+        sha256: "a".repeat(64),
+      }),
+    (data) => data.cloudProviders.reverse(),
+    (data) =>
+      data.transcriptionProviders
+        .find((p) => p.id === "groq")
+        .models.push({
+          id: "groq-live",
+          name: "Live",
+          description: "Fixture",
+          streaming: true,
+        }),
+    (data) =>
+      data.cloudProviders[1].models.push({
+        ...data.cloudProviders[0].models[0],
+      }),
+  ];
+  for (const change of changes) {
+    const next = structuredClone(seed);
+    change(next);
+    assert.throws(() => assertCompatibleCatalog(next, seed));
+  }
 });

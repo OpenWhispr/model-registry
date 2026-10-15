@@ -22,3 +22,15 @@ Existing models cannot be removed through this schema. Correct a bad publication
 `test/seed.json` preserves the complete desktop catalog extracted from `OpenWhispr/openwhispr` commit `2516e6e000b866a06099f69fd851b914069653d4`, `src/models/modelRegistryData.json`. CI validates against that floor and the last signed publication. The desktop vendors the same pure schema with its exact source digest; normal desktop builds do not contact this repository.
 
 This registry does not replace API inference routes, organization policy catalogs, admin required-model choices, mobile native catalogs, or credential storage. It does not change saved selections. Existing unhashed desktop downloads remain supported with their original immutable identities; hashes are mandatory for new downloads.
+
+## Publication and recovery
+
+`Validate catalog / validate` runs on PRs with read-only permissions and no signing secret. `Publish signed catalog` runs only on `main`, repeats validation/tests, checks the last signed catalog, and signs with Ed25519. The `registry-publish` environment permits only the `main` branch. A non-cancelling concurrency group serializes runs, and the publisher checks the latest main SHA immediately before pushing so an older queued job cannot overwrite a newer publication. Reruns of an already-published source do nothing.
+
+The public artifact is `https://raw.githubusercontent.com/OpenWhispr/model-registry/published/manifest.json`. The `published` branch retains `history/<version>.json` and the exact shared schema. Every publication records its source commit. Consumers verify exact decoded payload bytes against their compiled public key, then validate the schema and additive compatibility before applying anything. A failed publication leaves the previous artifact available.
+
+To recover from incorrect metadata, submit a corrective PR retaining all published IDs. It publishes a higher version; history is never force-reset. Do not replace an existing local artifact or its hash. To add a different artifact, use a new ID and its verified digest. Existing installed artifacts are not silently changed.
+
+The signing private key lives in the protected environment secret `REGISTRY_SIGNING_KEY`. PR checks cannot access it. The maintainer retains a local backup outside the repository with owner-only permissions. Never put private keys in issues, logs, commits, artifacts, or review text. Only the public key is checked in. Maintain strict access to repository administration and main-branch/workflow changes: an authorized main workflow can access the secret. This is not an OIDC signing service or threshold-signature system.
+
+Key rotation requires a desktop release that trusts the new key before switching the signer. A compromised signing key requires a desktop trust-root update; a catalog alone cannot revoke its own trust. Offline/managed installations may set `OPENWHISPR_MODEL_REGISTRY_MODE=bundled` to skip cache activation and network refresh. Native application release and device acceptance are separate from publishing this catalog.
