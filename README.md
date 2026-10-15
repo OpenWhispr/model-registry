@@ -15,6 +15,8 @@ Use Node 24, run `npm ci`, edit the matching JSON file in `registry/`, then run 
 
 Append models; keep every existing ID, provider, default, and native artifact identity. Model names and descriptions are required English fallbacks; an existing translation key may be included. Set `minAppVersion` to a canonical `major.minor.patch` when a new model needs a newer supported client. New downloadable models require a verified SHA-256 for the main file and every draft file. Only already supported model formats, runtimes, URLs and provider transports work. A new adapter, endpoint, credential binding or engine requires application changes.
 
+xAI and Corti transcription adapters currently have no model-selection parameter, so their transcription model IDs are fixed. Adding choices for those adapters first requires application support. This restriction does not apply to their separate reasoning catalogs.
+
 Existing models cannot be removed through this schema. Correct a bad publication with a higher version while retaining published identities. Do not republish an older catalog that loses newer entries or silently replace a downloaded artifact under its old ID.
 
 ## Compatibility floor
