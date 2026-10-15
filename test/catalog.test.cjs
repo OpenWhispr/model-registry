@@ -114,7 +114,7 @@ test("new downloads require hashes, safe names, supported URLs and runtime shape
     ...next.whisperModels.base,
     name: "New",
     fileName: "new.bin",
-    downloadUrl: "https://huggingface.co/example/model/resolve/main/new.bin",
+    downloadUrl: "https://huggingface.co/example/model/resolve/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/new.bin",
   };
   next.whisperModels["new-whisper"] = model;
   assert.throws(() => assertCompatibleCatalog(next, seed));
@@ -157,6 +157,8 @@ test("all auxiliary model downloads need integrity checks too", () => {
     id: "new-gguf",
     fileName: "new.gguf",
     sha256: "a".repeat(64),
+    revision: "a".repeat(40),
+    draftRevision: "b".repeat(40),
     draftHfRepo: "example/model",
     draftFileName: "new-draft.gguf",
     draftSizeBytes: 1000000,
@@ -280,7 +282,7 @@ test("Object prototype names still require new-model integrity and supported eng
     const next = structuredClone(seed);
     next.parakeetModels[id] = {
       ...seed.parakeetModels["parakeet-tdt-0.6b-v3"],
-      downloadUrl: "https://huggingface.co/test/model/resolve/main/model.tar.bz2",
+      downloadUrl: "https://huggingface.co/test/model/resolve/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/model.tar.bz2",
     };
     assert.throws(() => assertCompatibleCatalog(next, seed), /sha256/);
     next.parakeetModels[id].sha256 = "a".repeat(64);
