@@ -93,3 +93,22 @@ test("contract IDs are stable and change with any reader file", () => {
   assert.notEqual(contractId(hashes), contractId({ ...hashes, selection: "d".repeat(64) }));
   assert.match(contractId(hashes), /^[a-f0-9]{64}$/);
 });
+
+test("Whisper and Parakeet additions, edits and retirements reach the app", () => {
+  const next = structuredClone(base);
+  next.whisperModels["remote-whisper"] = {
+    ...structuredClone(next.whisperModels.base),
+    name: "Remote Whisper",
+    fileName: "ggml-remote.bin",
+  };
+  next.whisperModels.small.description = "Edited";
+  const [parakeetId] = Object.keys(next.parakeetModels);
+  next.parakeetModels[parakeetId].retired = true;
+  delete next.parakeetModels[parakeetId].legacy;
+  const accepted = acceptCatalog(next, seed, "1.12.0");
+  assert.equal(accepted.whisperModels["remote-whisper"].name, "Remote Whisper");
+  assert.equal(accepted.whisperModels.small.description, "Edited");
+  assert.equal(accepted.parakeetModels[parakeetId].retired, true);
+  next.whisperModels["../escape"] = structuredClone(next.whisperModels.base);
+  assert.equal(acceptCatalog(next, seed, "1.12.0").whisperModels["../escape"], undefined);
+});
