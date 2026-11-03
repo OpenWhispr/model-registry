@@ -45,6 +45,45 @@
         "descriptionKey": "models.descriptions.local.qwen_qwen3_5_2b_q4_k_m"
       },
       {
+        "id": "qwen3.5-0.8b-q4_k_m",
+        "name": "Qwen3.5 0.8B",
+        "size": "0.58GB",
+        "sizeBytes": 579615840,
+        "description": "Tiny Qwen3.5 for the fastest cleanup",
+        "fileName": "Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
+        "quantization": "q4_k_m",
+        "contextLength": 262144,
+        "hfRepo": "bartowski/Qwen_Qwen3.5-0.8B-GGUF",
+        "supportsThinking": true,
+        "descriptionKey": "models.descriptions.local.qwen_qwen3_5_0_8b_q4_k_m"
+      },
+      {
+        "id": "qwen3.8-27b-q4_k_m",
+        "name": "Qwen3.8 27B",
+        "size": "17.4GB",
+        "sizeBytes": 17442399968,
+        "description": "Most capable Qwen model for 32 GB machines",
+        "fileName": "Qwen3.8-27B-Q4_K_M.gguf",
+        "quantization": "q4_k_m",
+        "contextLength": 262144,
+        "hfRepo": "bartowski/Qwen3.8-27B-GGUF",
+        "supportsThinking": true,
+        "descriptionKey": "models.descriptions.local.qwen_qwen3_8_27b_q4_k_m"
+      },
+      {
+        "id": "qwen3.6-35b-a3b-q4_k_m",
+        "name": "Qwen3.6 35B MoE",
+        "size": "20.4GB",
+        "sizeBytes": 20419565568,
+        "description": "Fast mixture-of-experts model, 3B active parameters",
+        "fileName": "Qwen3.6-35B-A3B-Q4_K_M.gguf",
+        "quantization": "q4_k_m",
+        "contextLength": 262144,
+        "hfRepo": "ggml-org/Qwen3.6-35B-A3B-GGUF",
+        "supportsThinking": true,
+        "descriptionKey": "models.descriptions.local.qwen_qwen3_6_35b_a3b_q4_k_m"
+      },
+      {
         "id": "qwen3-8b-q4_k_m",
         "name": "Qwen3 8B",
         "size": "5.0GB",
@@ -54,6 +93,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "Qwen/Qwen3-8B-GGUF",
+        "legacy": true,
         "supportsThinking": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen3_8b_q4_k_m"
       },
@@ -67,6 +107,7 @@
         "quantization": "q5_k_m",
         "contextLength": 131072,
         "hfRepo": "Qwen/Qwen3-8B-GGUF",
+        "legacy": true,
         "supportsThinking": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen3_8b_q5_k_m"
       },
@@ -80,6 +121,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "Qwen/Qwen3-4B-GGUF",
+        "legacy": true,
         "supportsThinking": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen3_4b_q4_k_m"
       },
@@ -93,6 +135,7 @@
         "quantization": "q8_0",
         "contextLength": 131072,
         "hfRepo": "Qwen/Qwen3-1.7B-GGUF",
+        "legacy": true,
         "supportsThinking": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen3_1_7b_q8_0"
       },
@@ -106,6 +149,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "Qwen/Qwen3-32B-GGUF",
+        "legacy": true,
         "supportsThinking": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen3_32b_q4_k_m"
       },
@@ -119,6 +163,7 @@
         "quantization": "q5_k_m",
         "contextLength": 32768,
         "hfRepo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen2_5_1_5b_instruct_q5_k_m"
       },
       {
@@ -131,6 +176,7 @@
         "quantization": "q5_k_m",
         "contextLength": 32768,
         "hfRepo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen2_5_3b_instruct_q5_k_m"
       },
       {
@@ -143,6 +189,7 @@
         "quantization": "q4_k_m",
         "contextLength": 128000,
         "hfRepo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen2_5_7b_instruct_q4_k_m"
       },
       {
@@ -155,15 +202,54 @@
         "quantization": "q5_k_m",
         "contextLength": 128000,
         "hfRepo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.qwen_qwen2_5_7b_instruct_q5_k_m"
       }
-    ]
+    ],
+    "defaultModel": "qwen3.5-9b-q4_k_m"
   },
   {
     "id": "mistral",
     "name": "Mistral",
     "baseUrl": "https://huggingface.co",
     "models": [
+      {
+        "id": "ministral-3-8b-instruct-2512-q4_k_m",
+        "name": "Ministral 3 8B",
+        "size": "5.2GB",
+        "sizeBytes": 5198911904,
+        "description": "Fast non-thinking model for cleanup and tools",
+        "fileName": "Ministral-3-8B-Instruct-2512-Q4_K_M.gguf",
+        "quantization": "q4_k_m",
+        "contextLength": 262144,
+        "hfRepo": "mistralai/Ministral-3-8B-Instruct-2512-GGUF",
+        "recommended": true,
+        "descriptionKey": "models.descriptions.local.mistral_ministral_3_8b_instruct_2512_q4_k_m"
+      },
+      {
+        "id": "ministral-3-14b-instruct-2512-q4_k_m",
+        "name": "Ministral 3 14B",
+        "size": "8.2GB",
+        "sizeBytes": 8239593024,
+        "description": "Mistral's 14B model with tool use, 256K context",
+        "fileName": "Ministral-3-14B-Instruct-2512-Q4_K_M.gguf",
+        "quantization": "q4_k_m",
+        "contextLength": 262144,
+        "hfRepo": "mistralai/Ministral-3-14B-Instruct-2512-GGUF",
+        "descriptionKey": "models.descriptions.local.mistral_ministral_3_14b_instruct_2512_q4_k_m"
+      },
+      {
+        "id": "ministral-3-3b-instruct-2512-q4_k_m",
+        "name": "Ministral 3 3B",
+        "size": "2.1GB",
+        "sizeBytes": 2147023008,
+        "description": "Small and fast for dictation cleanup",
+        "fileName": "Ministral-3-3B-Instruct-2512-Q4_K_M.gguf",
+        "quantization": "q4_k_m",
+        "contextLength": 262144,
+        "hfRepo": "mistralai/Ministral-3-3B-Instruct-2512-GGUF",
+        "descriptionKey": "models.descriptions.local.mistral_ministral_3_3b_instruct_2512_q4_k_m"
+      },
       {
         "id": "mistral-nemo-12b-instruct-q4_k_m",
         "name": "Mistral Nemo 12B",
@@ -174,7 +260,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "mradermacher/Mistral-Nemo-12B-Instruct-GGUF",
-        "recommended": true,
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.mistral_nemo_12b_instruct_q4_k_m"
       },
       {
@@ -187,6 +273,7 @@
         "quantization": "q4_k_m",
         "contextLength": 32768,
         "hfRepo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.mistral_mistral_7b_instruct_v0_3_q4_k_m"
       },
       {
@@ -199,9 +286,11 @@
         "quantization": "q5_k_m",
         "contextLength": 32768,
         "hfRepo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.mistral_mistral_7b_instruct_v0_3_q5_k_m"
       }
-    ]
+    ],
+    "defaultModel": "ministral-3-8b-instruct-2512-q4_k_m"
   },
   {
     "id": "llama",
@@ -218,6 +307,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "bartowski/Llama-3.2-1B-Instruct-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.llama_llama_3_2_1b_instruct_q4_k_m"
       },
       {
@@ -230,7 +320,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
-        "recommended": true,
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.llama_llama_3_2_3b_instruct_q4_k_m"
       },
       {
@@ -243,6 +333,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.llama_llama_3_1_8b_instruct_q4_k_m"
       }
     ]
@@ -266,7 +357,8 @@
         "supportsThinking": true,
         "descriptionKey": "models.descriptions.local.openai_oss_gpt_oss_20b_mxfp4"
       }
-    ]
+    ],
+    "defaultModel": "gpt-oss-20b-mxfp4"
   },
   {
     "id": "gemma",
@@ -326,6 +418,21 @@
         "draftFileName": "mtp-gemma-4-26B-A4B-it.gguf",
         "draftSizeBytes": 251939328,
         "descriptionKey": "models.descriptions.local.gemma_gemma_4_26b_a4b_it_qat_q4_0"
+      },
+      {
+        "id": "gemma-4-12b-it-qat-q4_0",
+        "name": "Gemma 4 12B QAT",
+        "size": "7.2GB",
+        "sizeBytes": 6975879296,
+        "description": "Google's official QAT build, best fit for 16 GB machines",
+        "fileName": "gemma-4-12b-it-qat-q4_0.gguf",
+        "quantization": "q4_0",
+        "contextLength": 262144,
+        "hfRepo": "google/gemma-4-12B-it-qat-q4_0-gguf",
+        "draftHfRepo": "unsloth/gemma-4-12B-it-qat-GGUF",
+        "draftFileName": "mtp-gemma-4-12B-it.gguf",
+        "draftSizeBytes": 253708800,
+        "descriptionKey": "models.descriptions.local.gemma_gemma_4_12b_it_qat_q4_0"
       },
       {
         "id": "gemma-4-e4b-it-q4_k_m",
@@ -392,6 +499,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "bartowski/google_gemma-3-12b-it-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.gemma_gemma_3_12b_it_q4_k_m"
       },
       {
@@ -404,6 +512,7 @@
         "quantization": "q4_k_m",
         "contextLength": 131072,
         "hfRepo": "bartowski/google_gemma-3-4b-it-GGUF",
+        "legacy": true,
         "descriptionKey": "models.descriptions.local.gemma_gemma_3_4b_it_q4_k_m"
       },
       {
@@ -419,7 +528,8 @@
         "recommended": false,
         "descriptionKey": "models.descriptions.local.gemma_gemma_3_1b_it_q4_k_m"
       }
-    ]
+    ],
+    "defaultModel": "gemma-4-31b-it-q4_k_m"
   },
   {
     "id": "liquidai",
@@ -487,6 +597,7 @@
         "hfRepo": "LiquidAI/LFM2.5-230M-GGUF",
         "descriptionKey": "models.descriptions.local.liquidai_lfm2_5_230m_q8_0"
       }
-    ]
+    ],
+    "defaultModel": "lfm2.5-1.2b-instruct-q4_k_m"
   }
 ]

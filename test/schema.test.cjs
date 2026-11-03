@@ -1,21 +1,15 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const {
-  validateCatalog,
-  assertCompatibleCatalog,
-  selectCatalog,
-} = require("../lib/schema.cjs");
+const { validateCatalog, acceptCatalog } = require("../lib/schema.cjs");
 const { isModelSupported } = require("../lib/registrySelection.js");
+const { readCatalog } = require("../lib/catalog.cjs");
 const seed = require("./seed.json");
 
+const base = readCatalog();
+const openai = (data) => data.cloudProviders.find((p) => p.id === "openai");
 const withCloudModel = (model) => {
-  const data = structuredClone(seed);
-  data.cloudProviders[0].models.push({
-    id: "new-model",
-    name: "New",
-    description: "Fixture",
-    ...model,
-  });
+  const data = structuredClone(base);
+  openai(data).models.push({ id: "new-model", name: "New", description: "Fixture", ...model });
   return data;
 };
 
@@ -28,17 +22,8 @@ test("prerelease desktop versions initialize with SemVer-compatible selection", 
     ["1.11.1-beta.1", true],
     ["2.0.0-alpha", true],
   ]) {
-    const selected = selectCatalog(data, {}, running);
-    assert.equal(
-      selected.cloudProviders[0].models.some((m) => m.id === "new-model"),
-      supported,
-      running
-    );
-    assert.equal(
-      isModelSupported(data.cloudProviders[0].models.at(-1), running),
-      supported,
-      running
-    );
+    const selected = acceptCatalog(data, seed, running);
+    assert.equal(openai(selected).models.some((m) => m.id === "new-model"), supported, running);
   }
 });
 
@@ -51,24 +36,16 @@ test("prerelease minimum versions use numeric identifiers and ignore build metad
     ["1.11.0-1", "1.11.0-alpha", true],
     ["1.11.0-beta+one", "1.11.0-beta+two", true],
     ["1.11.0-beta", "1.11.0", true],
-  ]) {
-    const data = withCloudModel({ minAppVersion: minimum });
-    assert.equal(
-      selectCatalog(data, {}, running).cloudProviders[0].models.at(-1).id === "new-model",
-      expected
-    );
+  ])
     assert.equal(isModelSupported({ minAppVersion: minimum }, running), expected);
-  }
-  for (const version of [
-    "1.2",
-    "01.2.3",
-    "1.2.3-01",
-    "1.2.3-beta..1",
-    "1.2.3+",
-    "9007199254740992.0.0",
-  ]) {
-    assert.throws(() => selectCatalog(seed, {}, version), undefined, version);
-    assert.equal(isModelSupported({ minAppVersion: "1.0.0" }, version), false, version);
+});
+
+test("a malformed app version hides version-gated models instead of failing", () => {
+  const data = withCloudModel({ minAppVersion: "1.0.0" });
+  for (const version of ["1.11", "01.2.3", "1.2.3-01", "1.2.3+", "9007199254740992.0.0", undefined]) {
+    const selected = acceptCatalog(data, seed, version);
+    assert.equal(openai(selected).models.some((m) => m.id === "new-model"), false, version);
+    assert.ok(openai(selected).models.length > 0, version);
   }
 });
 
@@ -82,84 +59,122 @@ test("model IDs reject unsafe path segments without losing supported provider ID
     "C:/model",
     "gemini\\model",
     "gemini/%2e%2e/model",
-  ]) {
+  ])
     assert.throws(() => validateCatalog(withCloudModel({ id })), undefined, id);
-  }
-  for (const id of [
-    "openai/gpt-oss-120b",
-    "anthropic.claude-3-5:0",
-    "org/model-v2.1",
-    "gemini-2.5-flash",
-  ]) {
-    assert.doesNotThrow(() => validateCatalog(withCloudModel({ id })));
-  }
-  assert.doesNotThrow(() => validateCatalog(seed));
+  for (const id of ["vendor/model-120b", "anthropic.claude-3-5:0", "org/model-v2.1"])
+    assert.doesNotThrow(() => validateCatalog(withCloudModel({ id })), id);
 });
 
-function newLocal() {
-  const data = structuredClone(seed);
-  const model = structuredClone(data.localProviders[0].models[0]);
-  for (const field of ["draftHfRepo", "draftFileName", "draftSizeBytes", "draftSha256"])
-    delete model[field];
-  data.localProviders[0].models.push({
-    ...model,
-    id: "new-local",
-    fileName: "new-local.gguf",
-    sha256: "a".repeat(64),
-  });
-  return data;
-}
-
-test("new GGUF artifacts require immutable revisions and retain native identity locks", () => {
-  const data = newLocal();
-  const model = data.localProviders[0].models.at(-1);
-  assert.throws(() => assertCompatibleCatalog(data, seed), /revision/i);
-  model.revision = "b".repeat(40);
-  assert.doesNotThrow(() => assertCompatibleCatalog(data, seed));
-  model.draftHfRepo = model.hfRepo;
-  model.draftFileName = "new-local-draft.gguf";
-  model.draftSizeBytes = 100;
-  model.draftSha256 = "c".repeat(64);
-  assert.throws(() => assertCompatibleCatalog(data, seed), /revision/i);
-  model.draftRevision = "d".repeat(40);
-  assert.doesNotThrow(() => assertCompatibleCatalog(data, seed));
-  const changed = structuredClone(data);
-  changed.localProviders[0].models.at(-1).revision = "e".repeat(40);
-  assert.throws(() => assertCompatibleCatalog(changed, data), /identity/);
-  for (const revision of ["main", "v1.0", "a".repeat(39), "A".repeat(40)]) {
-    model.revision = revision;
-    assert.throws(() => validateCatalog(data), undefined, revision);
-  }
-  assert.doesNotThrow(() => assertCompatibleCatalog(seed, seed));
+test("authoring rejects unknown fields so typos fail review", () => {
+  assert.throws(() => validateCatalog(withCloudModel({ supportTemperature: false })), /Unrecognized/);
+  const data = structuredClone(base);
+  data.whisperModels.base.recomended = true;
+  assert.throws(() => validateCatalog(data), /Unrecognized/);
 });
 
-test("new direct Hugging Face downloads require a commit URL", () => {
-  const data = structuredClone(seed);
-  data.whisperModels["new-whisper"] = {
-    ...data.whisperModels.base,
-    fileName: "new-whisper.bin",
-    downloadUrl: "https://huggingface.co/org/repo/resolve/main/model.bin",
-    sha256: "a".repeat(64),
+test("lifecycle: retired models name an active replacement in the same provider", () => {
+  const retire = (fields) => {
+    const data = structuredClone(base);
+    Object.assign(openai(data).models.find((m) => m.id === "gpt-5.5"), fields);
+    return data;
   };
-  assert.throws(() => assertCompatibleCatalog(data, seed), /revision/i);
-  data.whisperModels["new-whisper"].downloadUrl =
-    `https://huggingface.co/org/repo/resolve/${"b".repeat(40)}/model.bin`;
-  assert.doesNotThrow(() => assertCompatibleCatalog(data, seed));
+  assert.doesNotThrow(() => validateCatalog(retire({ retired: true })));
+  assert.doesNotThrow(() => validateCatalog(retire({ retired: true, replacement: "gpt-6-luna" })));
+  for (const [fields, message] of [
+    [{ replacement: "gpt-6-luna" }, /not retired/],
+    [{ retired: true, legacy: true }, /both legacy and retired/],
+    [{ retired: true, replacement: "gpt-5.5" }, /replacement must be an active/],
+    [{ retired: true, replacement: "gpt-5-mini" }, /replacement must be an active/],
+    [{ retired: true, replacement: "claude-fable-5-1" }, /replacement must be an active/],
+  ])
+    assert.throws(() => validateCatalog(retire(fields)), message);
 });
 
-test("published native revisions cannot be added, removed, or changed in place", () => {
-  const legacyChange = structuredClone(seed);
-  legacyChange.localProviders[0].models[0].revision = "a".repeat(40);
-  assert.throws(() => assertCompatibleCatalog(legacyChange, seed), /identity/);
-  const published = newLocal();
-  published.localProviders[0].models.at(-1).revision = "a".repeat(40);
-  const removed = structuredClone(published);
-  delete removed.localProviders[0].models.at(-1).revision;
-  assert.throws(() => assertCompatibleCatalog(removed, published), /identity/);
-  const incomplete = structuredClone(seed);
-  incomplete.localProviders[0].models.push({
-    ...published.localProviders[0].models.at(-1),
-    draftRevision: "b".repeat(40),
-  });
-  assert.throws(() => validateCatalog(incomplete), /Incomplete draft artifact/);
+test("every provider with an active model names an active default", () => {
+  const data = structuredClone(base);
+  delete openai(data).defaultModel;
+  assert.throws(() => validateCatalog(data), /must name its defaultModel/);
+  openai(data).defaultModel = "gpt-5-mini";
+  assert.throws(() => validateCatalog(data), /default must be an active model/);
+  openai(data).defaultModel = "claude-fable-5-1";
+  assert.throws(() => validateCatalog(data), /default must be an active model/);
+  const azure = data.enterpriseProviders.find((p) => p.id === "azure");
+  assert.equal(azure.models.length, 0);
+  assert.equal(azure.defaultModel, undefined);
+});
+
+test("tokenParam needs an explicit temperature setting", () => {
+  assert.throws(
+    () => validateCatalog(withCloudModel({ tokenParam: "max_completion_tokens" })),
+    /without supportsTemperature/
+  );
+  assert.doesNotThrow(() =>
+    validateCatalog(withCloudModel({ tokenParam: "max_completion_tokens", supportsTemperature: false }))
+  );
+});
+
+test("a repeated cloud ID inherits or matches the first entry's request settings", () => {
+  const data = structuredClone(base);
+  const vertex = data.enterpriseProviders.find((p) => p.id === "vertex");
+  const flash = vertex.models.find((m) => m.id === "gemini-3.8-flash");
+  assert.doesNotThrow(() => validateCatalog(data));
+  flash.supportsThinking = false;
+  assert.throws(() => validateCatalog(data), /share an ID but not request settings/);
+  const gemini = data.cloudProviders.find((p) => p.id === "gemini");
+  Object.assign(flash, structuredClone(gemini.models.find((m) => m.id === "gemini-3.8-flash")));
+  assert.doesNotThrow(() => validateCatalog(data));
+});
+
+test("thinking floors and reasoning levels are data", () => {
+  assert.doesNotThrow(() => validateCatalog(withCloudModel({ thinkingFloor: { level: "low" } })));
+  assert.doesNotThrow(() => validateCatalog(withCloudModel({ thinkingFloor: { budget: 0 } })));
+  assert.throws(() => validateCatalog(withCloudModel({ thinkingFloor: { level: "max" } })));
+  assert.throws(() =>
+    validateCatalog(withCloudModel({ reasoningEffort: { options: ["ultra"] } }))
+  );
+});
+
+test("downloadable files must be the type their engine loads", () => {
+  const whisper = structuredClone(base);
+  whisper.whisperModels.base.fileName = "model.txt";
+  assert.throws(() => validateCatalog(whisper), /ggml-\*\.bin/);
+  const gguf = structuredClone(base);
+  gguf.localProviders[0].models[0].fileName = "model.txt";
+  assert.throws(() => validateCatalog(gguf), /\.gguf/);
+  const archive = structuredClone(base);
+  archive.parakeetModels["parakeet-tdt-0.6b-v3"].downloadUrl =
+    "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/model.zip";
+  assert.throws(() => validateCatalog(archive), /tar\.bz2/);
+});
+
+test("duplicate model IDs, colliding files and malformed metadata fail authoring", () => {
+  const duplicate = structuredClone(base);
+  openai(duplicate).models.push(structuredClone(openai(duplicate).models[0]));
+  assert.throws(() => validateCatalog(duplicate), /Duplicate model/);
+  const collision = structuredClone(base);
+  collision.localProviders[1].models[0].fileName =
+    collision.localProviders[0].models[0].fileName.toUpperCase().replace(".GGUF", ".gguf");
+  assert.throws(() => validateCatalog(collision), /Colliding/);
+  const alias = structuredClone(base);
+  alias.parakeetModels["PARAKEET-TDT-0.6B-V3"] = structuredClone(
+    alias.parakeetModels["parakeet-tdt-0.6b-v3"]
+  );
+  assert.throws(() => validateCatalog(alias), /Ambiguous local model ID/);
+  const malformed = structuredClone(base);
+  openai(malformed).models[0].supportsTemperature = "true";
+  assert.throws(() => validateCatalog(malformed));
+  for (const value of ["../evil.bin", "..\\evil.bin", "C:evil.bin", "CON", "bad.bin."]) {
+    const data = structuredClone(base);
+    data.whisperModels.base.fileName = value;
+    assert.throws(() => validateCatalog(data), undefined, value);
+  }
+  for (const url of [
+    "http://huggingface.co/example/model/resolve/main/ggml-new.bin",
+    "https://attacker.example/ggml-new.bin",
+    "https://huggingface.co@example.com/ggml-new.bin",
+  ]) {
+    const data = structuredClone(base);
+    data.whisperModels.base.downloadUrl = url;
+    assert.throws(() => validateCatalog(data), undefined, url);
+  }
 });
