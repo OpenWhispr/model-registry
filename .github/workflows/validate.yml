@@ -27,3 +27,5 @@ jobs:
         run: node scripts/check-previous.cjs
       - name: New and changed downloads match their real files
         run: node scripts/check-artifacts.cjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

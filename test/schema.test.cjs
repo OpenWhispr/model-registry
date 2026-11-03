@@ -178,3 +178,29 @@ test("duplicate model IDs, colliding files and malformed metadata fail authoring
     assert.throws(() => validateCatalog(data), undefined, url);
   }
 });
+
+test("a local or transcription ID belongs to one provider; nested objects stay strict to write", () => {
+  const local = structuredClone(base);
+  local.localProviders[1].models.push({
+    ...structuredClone(local.localProviders[0].models[0]),
+    fileName: "elsewhere.gguf",
+  });
+  assert.throws(() => validateCatalog(local), /Ambiguous model ID/);
+  const transcription = structuredClone(base);
+  const groq = transcription.transcriptionProviders.find((p) => p.id === "groq");
+  groq.models.push({ ...structuredClone(transcription.transcriptionProviders[0].models[0]) });
+  assert.throws(() => validateCatalog(transcription), /Ambiguous model ID/);
+  assert.throws(
+    () => validateCatalog(withCloudModel({ reasoningEffort: { options: ["low"], defualtValue: "low" } })),
+    /Unrecognized/
+  );
+  assert.throws(() => validateCatalog(withCloudModel({ thinkingFloor: { level: "low", budget: 0 } })));
+});
+
+test("the app reader drops unknown nested fields instead of the whole entry", () => {
+  const data = structuredClone(base);
+  const [id] = Object.keys(data.parakeetModels).filter((key) => data.parakeetModels[key].organization);
+  data.parakeetModels[id].organization.website = "https://example.com";
+  const accepted = acceptCatalog(data, seed, "1.12.0");
+  assert.deepEqual(accepted.parakeetModels[id].organization, base.parakeetModels[id].organization);
+});

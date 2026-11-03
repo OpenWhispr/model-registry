@@ -65,7 +65,9 @@ When an app release changes its reader, add that reader under `compat/clients/` 
 
 A serialized, non-cancelling queue and a final "is this still the latest main?" check stop an older run from overwriting a newer publication.
 
-To undo a bad publication quickly, run **Roll back the signed catalog** with the version to restore. It republishes that version's data under a new number; anything retired or added since stays retired. Then fix `main`, or its next publication will bring the bad data back.
+To undo a bad publication quickly, run **Roll back the signed catalog** with the version to restore. It republishes that version's data under a new number: models retired since stay retired, and models added since come back as legacy (hidden from new choices, still working for anyone already using them). Then fix `main`, or its next publication will bring the bad data back. A model that must stop working for everyone (a broken file, a provider shutdown) is retired in a normal pull request instead.
+
+A publication must keep testing every reader the last one was tested with. To stop serving a very old app, list its contract in `compat/dropped-clients.json` in a reviewed pull request.
 
 ## Keys
 

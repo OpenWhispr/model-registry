@@ -5,7 +5,7 @@ const { readCatalog } = require("../lib/catalog.cjs");
 const { verifyEnvelope } = require("../lib/envelope.cjs");
 const { SCHEMA_VERSION, validateManifest } = require("../lib/schema.cjs");
 const { createPublication, readPreviousManifest } = require("../lib/publication.cjs");
-const { checkCompatibility } = require("../lib/compat.cjs");
+const { checkCompatibility, droppedClients } = require("../lib/compat.cjs");
 const { rollbackCatalog } = require("../lib/rollback.cjs");
 const trusted = require("../trusted-keys.json");
 
@@ -13,6 +13,8 @@ const directory = process.env.PUBLICATION_DIR;
 if (!directory || !process.env.REGISTRY_SIGNING_KEY)
   throw new Error("Publication directory and signing key required");
 const rollbackTo = process.env.ROLLBACK_TO ? Number(process.env.ROLLBACK_TO) : null;
+if (rollbackTo !== null && !(Number.isSafeInteger(rollbackTo) && rollbackTo > 0))
+  throw new Error(`ROLLBACK_TO must be a published version number, not ${process.env.ROLLBACK_TO}`);
 const git = (args, cwd = process.cwd()) =>
   execFileSync("git", args, {
     cwd,
@@ -21,10 +23,14 @@ const git = (args, cwd = process.cwd()) =>
   }).trim();
 const sourceCommit = git(["rev-parse", "HEAD"]);
 const latestMain = () => git(["ls-remote", "origin", "refs/heads/main"]).split(/\s/)[0];
-if (sourceCommit !== latestMain()) {
-  console.log("Skipped stale source; the newer main workflow owns publication.");
-  process.exit(0);
-}
+// A stale normal run defers to the newer one; a rollback must never report success
+// without publishing, so it fails instead and can be run again.
+const skipStale = (message) => {
+  console.log(message);
+  process.exit(rollbackTo ? 1 : 0);
+};
+if (sourceCommit !== latestMain())
+  skipStale("Skipped stale source; the newer main workflow owns publication.");
 const output = path.join(directory, `v${SCHEMA_VERSION}`);
 const readEnvelope = (file) => verifyEnvelope(fs.readFileSync(file), trusted);
 // The v2 sequence continues the version numbers of the frozen v1 manifest.
@@ -45,6 +51,7 @@ const envelope = createPublication({
   sourceCommit,
   headCommit: latestMain(),
   testedClientContracts: checkCompatibility(data),
+  droppedClientContracts: droppedClients(),
   keyId: "primary-2026-10",
   privateKey: process.env.REGISTRY_SIGNING_KEY,
 });
@@ -82,9 +89,6 @@ git(
   ],
   directory
 );
-if (sourceCommit !== latestMain()) {
-  console.log("Skipped stale source before push.");
-  process.exit(0);
-}
+if (sourceCommit !== latestMain()) skipStale("Skipped stale source before push.");
 git(["push", "origin", "HEAD:published"], directory);
 console.log(`Published verified catalog ${version} from ${sourceCommit}`);

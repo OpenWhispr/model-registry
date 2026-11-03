@@ -11,14 +11,18 @@ const base = readCatalog();
 const openai = (data) => data.cloudProviders.find((p) => p.id === "openai");
 
 // An "older" reader: today's code, minus support for budget-style thinking floors.
-function olderReader() {
+function olderReader(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "registry-client-"));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const lib = path.join(__dirname, "..", "lib");
   for (const file of ["envelope.cjs", "registrySelection.js"])
     fs.copyFileSync(path.join(lib, file), path.join(dir, file));
   const schema = fs
     .readFileSync(path.join(lib, "schema.cjs"), "utf8")
-    .replace("z.object({ budget: z.number().int().min(0).max(1000000) })", 'z.object({ level: z.literal("low") })')
+    .replace(
+      "const thinkingBudgetShape = { budget: z.number().int().min(0).max(1000000) };",
+      "const thinkingBudgetShape = { budget: z.never() };"
+    )
     .replace('require("./registrySelection.js")', `require(${JSON.stringify(path.join(dir, "registrySelection.js"))})`)
     .replace('require("zod")', `require(${JSON.stringify(require.resolve("zod"))})`);
   fs.writeFileSync(path.join(dir, "schema.cjs"), schema);
@@ -31,8 +35,8 @@ test("this repository's own reader accepts today's catalog", () => {
   assert.deepEqual(checkCompatibility(base, [own]), [own.id]);
 });
 
-test("a field an older reader cannot parse needs a minAppVersion that excludes it", () => {
-  const older = olderReader();
+test("a field an older reader cannot parse needs a minAppVersion that excludes it", (t) => {
+  const older = olderReader(t);
   const next = structuredClone(base);
   openai(next).models.push({
     id: "needs-new-reader",
@@ -45,9 +49,9 @@ test("a field an older reader cannot parse needs a minAppVersion that excludes i
   assert.doesNotThrow(() => checkCompatibility(next, [older]));
 });
 
-test("a catalog that loses a model an older app bundles fails", () => {
+test("a catalog that loses a model an older app bundles fails", (t) => {
   // Simulate a reader that, unlike today's, does not restore bundled entries.
-  const older = olderReader();
+  const older = olderReader(t);
   const file = path.join(older.dir, "schema.cjs");
   fs.writeFileSync(
     file,

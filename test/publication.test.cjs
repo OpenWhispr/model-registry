@@ -1,7 +1,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { generateKeyPairSync } = require("node:crypto");
-const { createPublication, readPreviousManifest } = require("../lib/publication.cjs");
+const {
+  createPublication,
+  readPreviousManifest,
+  assertReadersKept,
+} = require("../lib/publication.cjs");
 const { verifyEnvelope } = require("../lib/envelope.cjs");
 const { validateManifest } = require("../lib/schema.cjs");
 const { readCatalog } = require("../lib/catalog.cjs");
@@ -60,4 +64,23 @@ test("the app-facing manifest is tolerant at the top level but strict about trus
   assert.doesNotThrow(() => validateManifest({ ...manifest, futureField: true }));
   assert.throws(() => validateManifest({ ...manifest, schemaVersion: 1 }));
   assert.throws(() => validateManifest({ ...manifest, testedClientContracts: [] }));
+});
+
+test("a publication cannot silently stop testing a reader the last one tested", () => {
+  const previous = { testedClientContracts: ["a".repeat(64), "b".repeat(64)] };
+  assert.throws(() => assertReadersKept(["a".repeat(64)], previous), /no longer tested: b{64}/);
+  assert.doesNotThrow(() => assertReadersKept(["a".repeat(64)], previous, ["b".repeat(64)]));
+  assert.doesNotThrow(() => assertReadersKept(["c".repeat(64)], undefined));
+  const first = open(createPublication({ ...options }));
+  assert.throws(
+    () =>
+      createPublication({
+        ...options,
+        sourceCommit: "d".repeat(40),
+        headCommit: "d".repeat(40),
+        previous: first,
+        testedClientContracts: ["e".repeat(64)],
+      }),
+    /no longer tested/
+  );
 });
