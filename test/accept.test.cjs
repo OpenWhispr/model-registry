@@ -82,6 +82,11 @@ test("garbage never throws and yields the bundled catalog", () => {
   assert.doesNotThrow(() => acceptCatalog(JSON.parse('{"__proto__":{"x":1}}'), seed, "1.12.0"));
 });
 
+test("a malformed bundle is used as shipped rather than failing the app", () => {
+  const broken = { ...structuredClone(seed), cloudProviders: "broken" };
+  assert.deepEqual(acceptCatalog(base, broken, "1.12.0"), broken);
+});
+
 test("contract IDs are stable and change with any reader file", () => {
   const hashes = { schema: "a".repeat(64), envelope: "b".repeat(64), selection: "c".repeat(64) };
   assert.equal(contractId(hashes), contractId({ ...hashes }));
