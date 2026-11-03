@@ -1,55 +1,63 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { generateKeyPairSync } = require("node:crypto");
-const { createPublication } = require("../lib/publication.cjs");
+const { createPublication, readPreviousManifest } = require("../lib/publication.cjs");
 const { verifyEnvelope } = require("../lib/envelope.cjs");
-const seed = require("./seed.json");
+const { validateManifest } = require("../lib/schema.cjs");
+const { readCatalog } = require("../lib/catalog.cjs");
+
+const base = readCatalog();
 const keys = generateKeyPairSync("ed25519");
+const tested = ["c".repeat(64)];
 const options = {
-  data: seed,
+  data: base,
   sourceCommit: "a".repeat(40),
   headCommit: "a".repeat(40),
+  testedClientContracts: tested,
   keyId: "test",
   privateKey: keys.privateKey,
-  publishedAt: "2026-10-14T12:00:00Z",
+  publishedAt: "2026-11-03T12:00:00Z",
 };
-const trusted = {
-  test: keys.publicKey.export({ type: "spki", format: "pem" }),
-};
-test("publications advance versions, retain IDs, and reruns are idempotent", () => {
-  const first = createPublication({ ...options });
-  const prior = verifyEnvelope(JSON.stringify(first), trusted);
-  assert.equal(prior.manifestVersion, 1);
-  assert.equal(createPublication({ ...options, previous: prior }), null);
-  const data = structuredClone(seed);
-  data.cloudProviders[0].models.push({
-    id: "new-published",
-    name: "New",
-    description: "Fixture",
+const trusted = { test: keys.publicKey.export({ type: "spki", format: "pem" }) };
+const open = (envelope) => validateManifest(verifyEnvelope(JSON.stringify(envelope), trusted));
+
+test("v2 continues the v1 version sequence and signs the readers it was tested with", () => {
+  const v1 = readPreviousManifest({
+    schemaVersion: 1,
+    manifestVersion: 3,
+    sourceCommit: "f".repeat(40),
+    contractHashes: {},
+    data: base,
   });
-  const second = createPublication({
-    ...options,
-    data,
-    previous: prior,
-    sourceCommit: "b".repeat(40),
-    headCommit: "b".repeat(40),
-  });
-  const manifest = verifyEnvelope(JSON.stringify(second), trusted);
-  assert.equal(manifest.manifestVersion, 2);
+  const manifest = open(createPublication({ ...options, previous: v1 }));
+  assert.equal(manifest.schemaVersion, 2);
+  assert.equal(manifest.manifestVersion, 4);
+  assert.deepEqual(manifest.testedClientContracts, tested);
+  assert.match(manifest.contractHashes.schema, /^[a-f0-9]{64}$/);
+});
+
+test("reruns are idempotent; rollbacks and removals are handled explicitly", () => {
+  const first = open(createPublication({ ...options }));
+  assert.equal(createPublication({ ...options, previous: first }), null);
+  assert.equal(open(createPublication({ ...options, previous: first, rollback: true })).manifestVersion, 2);
+  const data = structuredClone(base);
+  data.cloudProviders[0].models.push({ id: "new-published", name: "New", description: "Fixture" });
+  const next = { ...options, sourceCommit: "b".repeat(40), headCommit: "b".repeat(40) };
+  const second = open(createPublication({ ...next, data, previous: first }));
+  assert.equal(second.manifestVersion, 2);
   assert.throws(
-    () =>
-      createPublication({
-        ...options,
-        previous: manifest,
-        sourceCommit: "c".repeat(40),
-        headCommit: "c".repeat(40),
-      }),
-    /Removed model|retain their order/,
+    () => createPublication({ ...next, sourceCommit: "c".repeat(40), headCommit: "c".repeat(40), previous: second }),
+    /retire it instead/
   );
 });
+
 test("a stale queued source cannot publish after a newer main commit", () => {
-  assert.throws(
-    () => createPublication({ ...options, headCommit: "b".repeat(40) }),
-    /Stale source/,
-  );
+  assert.throws(() => createPublication({ ...options, headCommit: "b".repeat(40) }), /Stale source/);
+});
+
+test("the app-facing manifest is tolerant at the top level but strict about trust fields", () => {
+  const manifest = open(createPublication({ ...options }));
+  assert.doesNotThrow(() => validateManifest({ ...manifest, futureField: true }));
+  assert.throws(() => validateManifest({ ...manifest, schemaVersion: 1 }));
+  assert.throws(() => validateManifest({ ...manifest, testedClientContracts: [] }));
 });

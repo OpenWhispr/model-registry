@@ -32,6 +32,8 @@ jobs:
           cache-dependency-path: source/package-lock.json
       - run: npm ci --ignore-scripts && npm test && npm run validate
         working-directory: source
+      - run: node scripts/check-compat.cjs && node scripts/check-artifacts.cjs
+        working-directory: source
       - name: Sign and publish the current main source
         working-directory: source
         run: node scripts/publish.cjs
