@@ -50,6 +50,21 @@
     "extractDir": "sherpa-onnx-nemo-parakeet-unified-en-0.6b-int8-non-streaming",
     "descriptionKey": "models.descriptions.parakeet.parakeet_unified_en_0_6b"
   },
+  "parakeet-tdt-110m-en": {
+    "name": "Parakeet TDT 110M EN",
+    "sherpaModelType": "nemo_transducer",
+    "description": "Lightweight English ASR with punctuation for low-end machines",
+    "size": "136MB",
+    "sizeMb": 136,
+    "expectedSizeBytes": 108035095,
+    "language": "en",
+    "supportedLanguages": [
+      "en"
+    ],
+    "downloadUrl": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8.tar.bz2",
+    "extractDir": "sherpa-onnx-nemo-parakeet_tdt_transducer_110m-en-36000-int8",
+    "descriptionKey": "models.descriptions.parakeet.parakeet_tdt_110m_en"
+  },
   "nemotron-speech-streaming-en-0.6b": {
     "name": "Nemotron Speech Streaming EN 0.6B",
     "description": "English streaming ASR from NVIDIA Nemotron",

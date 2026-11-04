@@ -1,40 +1,76 @@
 # OpenWhispr model registry
 
-Reviewed model data for OpenWhispr desktop. GitHub edits, pull requests, automated validation, and publication history provide the catalog CMS. A merged catalog edit can reach an installed compatible desktop without a new app release. Provider integrations and native engines still ship in the app.
+The list of models OpenWhispr desktop offers, kept as reviewed data. A merged change is signed and published, and installed apps pick it up without a new release. Provider integrations and native engines still ship in the app, so some models need an app release as well (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
-## Edit a catalog
+## Files
 
-Use Node 24, run `npm ci`, edit the matching JSON file in `registry/`, then run `npm test` and `npm run validate`. Open a pull request. The publishing workflow signs validated merged changes; pull requests never receive the signing key.
+- `registry/cloud-providers.json`: reasoning models for the existing cloud providers.
+- `registry/transcription-providers.json`: transcription models and their streaming flag.
+- `registry/enterprise-providers.json`: suggested models for Bedrock, Azure and Vertex, independent of tenant deployments and policy.
+- `registry/local-gguf.json`: local reasoning models and optional draft models.
+- `registry/whisper.json` / `registry/parakeet.json`: local transcription models.
+- `registry/legacy.json`: preserved compatibility data, not editable.
+- `registry/trusted-publishers.json`: Hugging Face organisations allowed to supply files.
+- `test/seed.json`: the catalog the desktop app bundles (the floor every publication must keep).
+- `compat/clients/<contract>/`: the catalog readers of released apps, which CI tests every catalog against.
 
-- `cloud-providers.json`: reasoning models for existing cloud providers.
-- `transcription-providers.json`: transcription models and supported streaming flags.
-- `enterprise-providers.json`: built-in model suggestions, independent of tenant deployments and policy.
-- `local-gguf.json`: local reasoning models and optional draft models.
-- `whisper.json` / `parakeet.json`: local transcription model metadata.
-- `legacy.json`: preserved compatibility data, not an editable runtime surface.
+## A model's lifecycle
 
-Append models; keep every existing ID, provider, default, and native artifact identity. Model names and descriptions are required English fallbacks; an existing translation key may be included. Set `minAppVersion` to a semantic version such as `1.11.0` or `1.11.0-beta.1` when a new model needs a newer supported client. New downloadable models require a verified SHA-256 for the main file and every draft file. New Hugging Face GGUF entries also require `revision`, the repository's full 40-character lowercase commit SHA, plus `draftRevision` when there is a draft file. Direct Hugging Face `downloadUrl` and `manifestUrl` values for new models must use `/resolve/<40-character-commit>/` rather than a branch or tag. Keep those revisions and digests unchanged once published; use a new model ID for different bytes. Existing bundled artifacts retain their original download paths. Only already supported model formats, runtimes, URLs and provider transports work. A new adapter, endpoint, credential binding or engine requires application changes.
+| State | How | What the app does |
+|---|---|---|
+| Active | default | Listed and usable. |
+| Legacy | `"legacy": true` | Still works. Hidden from pickers unless it is the user's current choice or, for a local model, still downloaded. Can be set and cleared. |
+| Retired | `"retired": true`, optional `"replacement": "<id>"` | No longer works (the provider shut it down, or a file was withdrawn). Never listed. Selections move to the replacement, or the provider default, and the user is told. One way only. |
 
-Prerelease versions follow SemVer precedence: `1.11.0-beta.1` is below `1.11.0`, numeric prerelease identifiers compare numerically, and build metadata does not change compatibility. Model IDs can contain provider namespaces such as `org/model`, but empty or dot path segments, drive prefixes, encoded separators, and backslashes are rejected.
+Models are never deleted: retire them. Old caches and apps learn what happened from the retired entry. `minAppVersion` hides a new model from apps too old to use it, and stays fixed once published.
 
-xAI and Corti transcription adapters currently have no model-selection parameter, so their transcription model IDs are fixed. Adding choices for those adapters first requires application support. This restriction does not apply to their separate reasoning catalogs.
+Each provider names its `defaultModel`, which must be active and can change at any time. List order is display order only.
 
-Existing models cannot be removed through this schema. Correct a bad publication with a higher version while retaining published identities. Do not republish an older catalog that loses newer entries or silently replace a downloaded artifact under its old ID.
+## Correcting a published model
 
-## Compatibility floor
+Names, descriptions, lifecycle flags, defaults and order can change freely.
 
-`test/seed.json` preserves the complete desktop catalog extracted from `OpenWhispr/openwhispr` commit `2516e6e000b866a06099f69fd851b914069653d4`, `src/models/modelRegistryData.json`. CI validates against that floor and the last signed publication. The desktop vendors the same pure schema with its exact source digest; normal desktop builds do not contact this repository.
+A downloadable file is located by its URL or Hugging Face revision and proven by its SHA-256. Change one at a time, so the other still vouches for the bytes:
 
-This registry does not replace API inference routes, organization policy catalogs, admin required-model choices, mobile native catalogs, or credential storage. It does not change saved selections. Existing unhashed desktop downloads remain supported with their original immutable identities; hashes are mandatory for new downloads.
+- **Move a file** (for example, a repository is renamed) while keeping its `sha256`. Moves to Hugging Face must be pinned to a 40-character commit.
+- **Fix a wrong `sha256`** while the file stays at the same pinned revision.
+- **Changing both** means it is a different file: add it under a new model ID and retire the old one.
+
+A file without a hash can be given one first, then moved. File name, folder, engine type, quantization and context length identify the artifact and cannot change.
+
+Request settings (`tokenParam`, `supportsTemperature`, `supportsThinking`, `disableThinking`, `supportsVision`, `supportsTools`, `reasoningEffort`, `thinkingFloor`) can change, but a wrong one breaks every request. CI lists such changes and fails until a maintainer checks them and adds the `capability-change` label.
+
+## What CI checks
+
+On every pull request, without access to the signing key:
+
+1. `npm test` and `npm run validate`: the catalog is valid, unknown fields are rejected, and every model the app bundles is still present.
+2. `scripts/check-compat.cjs`: every released app's reader (plus this repository's own) accepts the catalog, keeps its bundled models, finds every default, and can read every entry not excluded by `minAppVersion`.
+3. `scripts/check-previous.cjs`: the catalog is a valid next step from the live publication, and request-setting changes carry the `capability-change` label.
+4. `scripts/check-artifacts.cjs`: every new or changed download exists at its source with the declared hash and size. GGUF files must start with the GGUF header, and Hugging Face files must come from a trusted publisher.
+
+## How the app reads a publication
+
+Apps read leniently: a field they do not know is dropped, an entry they cannot understand is skipped on its own (the bundled copy stands in if there is one), and the rest still applies. Provider endpoints and membership always come from the app. Each publication signs `testedClientContracts`, the readers CI ran it through. An app applies a publication only when its own reader is listed, otherwise it keeps its bundled catalog and last good cache.
+
+When an app release changes its reader, add that reader under `compat/clients/` first (see CONTRIBUTING.md); until then the new release runs on its bundled catalog.
 
 ## Publication and recovery
 
-`Validate catalog / validate` runs on PRs with read-only permissions and no signing secret. `Publish signed catalog` runs only on `main`, repeats validation/tests, checks the last signed catalog, and signs with Ed25519. The `registry-publish` environment permits only the `main` branch. A non-cancelling concurrency group serializes runs, and the publisher checks the latest main SHA immediately before pushing so an older queued job cannot overwrite a newer publication. Reruns of an already-published source do nothing.
+`Publish signed catalog` runs on `main` in the protected `registry-publish` environment, repeats every check, signs with Ed25519, and pushes to the `published` branch:
 
-The public artifact is `https://raw.githubusercontent.com/OpenWhispr/model-registry/published/manifest.json`. The `published` branch retains `history/<version>.json` and the exact shared schema. Every publication records its source commit. Consumers verify exact decoded payload bytes against their compiled public key, then validate the schema and additive compatibility before applying anything. A failed publication leaves the previous artifact available.
+- `v2/manifest.json`: the current publication. `v2/history/<n>.json` keeps every version.
+- `v2/schema.cjs`, `v2/envelope.cjs`, `v2/registrySelection.js`: the exact reader that published it, which desktop vendors.
+- `manifest.json` and `history/` at the root: the retired v1 format, frozen at version 3.
 
-To recover from incorrect metadata, submit a corrective PR retaining all published IDs. It publishes a higher version; history is never force-reset. Do not replace an existing local artifact or its hash. To add a different artifact, use a new ID and its verified digest. Existing installed artifacts are not silently changed.
+A serialized, non-cancelling queue and a final "is this still the latest main?" check stop an older run from overwriting a newer publication.
 
-The signing private key lives in the protected environment secret `REGISTRY_SIGNING_KEY`. PR checks cannot access it. The maintainer retains a local backup outside the repository with owner-only permissions. Never put private keys in issues, logs, commits, artifacts, or review text. Only the public key is checked in. Maintain strict access to repository administration and main-branch/workflow changes: an authorized main workflow can access the secret. This is not an OIDC signing service or threshold-signature system.
+To undo a bad publication quickly, run **Roll back the signed catalog** with the version to restore. It republishes that version's data under a new number: models retired since stay retired, and models added since come back as legacy (hidden from new choices, still working for anyone already using them). Then fix `main`, or its next publication will bring the bad data back. A model that must stop working for everyone (a broken file, a provider shutdown) is retired in a normal pull request instead.
 
-Key rotation requires a desktop release that trusts the new key before switching the signer. A compromised signing key requires a desktop trust-root update; a catalog alone cannot revoke its own trust. Offline/managed installations may set `OPENWHISPR_MODEL_REGISTRY_MODE=bundled` to skip cache activation and network refresh. Native application release and device acceptance are separate from publishing this catalog.
+A publication must keep testing every reader the last one was tested with. To stop serving a very old app, list its contract in `compat/dropped-clients.json` in a reviewed pull request.
+
+## Keys
+
+`REGISTRY_SIGNING_KEY` lives only in the `registry-publish` environment; pull requests never see it. Only public keys are checked in (`trusted-keys.json`). A second, offline recovery key is held separately by the maintainer; switching the signer to it, or recovering from a stolen key, needs an app release that trusts the new key. Apps refuse a version number more than 10,000 above the one they hold, so a stolen key cannot lock them out with one huge number.
+
+This registry does not replace API inference routing, organisation policy catalogs, admin required-model choices, mobile catalogs or credential storage.
