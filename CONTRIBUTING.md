@@ -18,6 +18,8 @@ node scripts/check-artifacts.cjs   # needs network
 
 1. Add it to the matching file in `registry/` (see the README for which file holds what). `name` and `description` are required, in English.
 2. Use an existing provider and its existing transport. A new provider, endpoint, request format or native engine needs a desktop app change first.
+   - Once a desktop app ships a new provider, add the provider at the end of its file and to `test/seed.json`.
+   - Set each of its models' `minAppVersion` to that app release. Providers can't be removed or reordered.
 3. Local downloads need:
    - a `sha256` for every file, including a draft file if there is one;
    - for GGUF models, the full 40-character Hugging Face commit in `revision` (and `draftRevision`);
