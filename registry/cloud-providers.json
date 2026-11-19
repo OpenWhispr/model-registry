@@ -407,6 +407,7 @@
         "id": "gemini-4-neon",
         "name": "Gemini 4 Neon",
         "description": "Frontier Gemini 4 for complex coding and reasoning, 1M context",
+        "minAppVersion": "1.12.1",
         "supportsThinking": true,
         "supportsVision": true,
         "reasoningEffort": {
@@ -425,6 +426,7 @@
         "id": "gemini-4-hydrogen",
         "name": "Gemini 4 Hydrogen",
         "description": "Fast, efficient Gemini 4 for everyday coding and agentic work, 1M context",
+        "minAppVersion": "1.12.1",
         "supportsThinking": true,
         "supportsVision": true,
         "reasoningEffort": {
