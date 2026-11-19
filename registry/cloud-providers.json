@@ -413,10 +413,9 @@
           "options": [
             "low",
             "medium",
-            "high",
-            "xhigh"
+            "high"
           ],
-          "defaultValue": "medium"
+          "defaultValue": "high"
         },
         "thinkingFloor": {
           "level": "low"
@@ -432,10 +431,9 @@
           "options": [
             "low",
             "medium",
-            "high",
-            "xhigh"
+            "high"
           ],
-          "defaultValue": "medium"
+          "defaultValue": "high"
         },
         "thinkingFloor": {
           "level": "low"
