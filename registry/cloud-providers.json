@@ -404,6 +404,44 @@
         }
       },
       {
+        "id": "gemini-4-neon",
+        "name": "Gemini 4 Neon",
+        "description": "Frontier Gemini 4 for complex coding and reasoning, 1M context",
+        "supportsThinking": true,
+        "supportsVision": true,
+        "reasoningEffort": {
+          "options": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "defaultValue": "medium"
+        },
+        "thinkingFloor": {
+          "level": "low"
+        }
+      },
+      {
+        "id": "gemini-4-hydrogen",
+        "name": "Gemini 4 Hydrogen",
+        "description": "Fast, efficient Gemini 4 for everyday coding and agentic work, 1M context",
+        "supportsThinking": true,
+        "supportsVision": true,
+        "reasoningEffort": {
+          "options": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "defaultValue": "medium"
+        },
+        "thinkingFloor": {
+          "level": "low"
+        }
+      },
+      {
         "id": "gemini-3.5-flash",
         "name": "Gemini 3.5 Flash",
         "description": "Fast, high-capability Gemini model",
