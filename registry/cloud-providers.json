@@ -586,7 +586,8 @@
         "description": "Private Moonshot flagship for long-horizon coding and agentic work, 256K context",
         "tokenParam": "max_tokens",
         "supportsTemperature": true,
-        "supportsThinking": true
+        "supportsThinking": true,
+        "minAppVersion": "1.12.1"
       },
       {
         "id": "gpt-oss-120b",
